@@ -9,109 +9,69 @@
  Purpose: Microshell Simulation. 
  ************************************************************/
 
-#include <sys/types.h>
-#include <sys/wait.h>
-#include <unistd.h>
-#include <cstdlib>
-#include <cstdio>
+#include <string>
 #include <iostream>
-#include <cstring>
-using namespace std;
+#include <unistd.h>
+#include <vector>
+
+using std::cout;
+using std::endl;
+using std::cin;
+using std::string;
+using std::vector;
+
+void doPipe()
+{
+  cout << "It's a pipe." << endl;
+}
+
+string getInput(string command)
+{
+  cout << "480shell>";
+  getline(cin, command);
+  return command;
+}
+
+void executeCommand(string command)
+{
+  string realCommand; 
+
+  for ( auto x : command )
+  {
+    realCommand += x;
+  }
+
+  execlp(realCommand.c_str(), realCommand.c_str(), NULL);
+}
 
 int main()
 {
-  // This is where all our commands get stored - neat
-  char buffer[80];
 
-  // Until we say so keep going please
-  while (true)
+  // Cool bool
+  bool cool = true;
+
+  // We cool?
+  while(cool)
   {
-    // Here are our variables, the names should be self explanatory
-    // Specifically argument stores up to 5 commands
-    // Basically we break down buffer and fill these variables so
-    // they may be passed into execvp
-    string command, option;
-    char *argument[] = {(char*)0, (char*)0, (char*)0, (char*)0, (char*)0}; 
+    string command;
+    command = getInput(command);
 
-    // prompt user for command to run
-    cout << "480shell> ";
-
-    // take in user input
-    cin.getline(buffer, 80);
-
-    // If the user says exit listen to them
-    // and break down
-    if (!strcmp(buffer, "quit") || !strcmp(buffer, "q"))
+    // Should we stop?
+    if(command.find("quit") != string::npos || command.find("q") != string::npos)
     {
-      break;
+      cool = false;
     }
-
-    // Split buffer into pch pointer to char
-    char * pch;
-    pch = strtok (buffer, " ");
-
-    // Give us a counter variable
-    int count = 0;
-
-    // While we have variables in pch keep going
-    while (pch != NULL)
+    // If not stopping, see if pipe
+    else if (command.find("||") != string::npos)
     {
-      // If it's the first command
-      // fill the variable command
-      // so we know what to run
-      if (count == 0)
-      {
-        command = pch;
-      }
-
-      // Pack our array with the variables
-      argument[count] = pch;
-      // Reset pch
-      pch = strtok (NULL, " ");
-      // Count iteration
-      count++;
+      doPipe();
     }
-
-    //  This is where the magic starts
-    //  What I mean by this, is it's where
-    //  the processes and forking actually happens
-    //  everything above was just user input this
-    //  is the "meat" and the above was the "potatoes"
-
-    // Initialize necessary variables
-    int rs, status;
-
-    // fork will make 2 processes
-    rs = fork();
-
-    // If fork is unhappy then break down
-    if (rs == -1)
-    { 
-      perror("fork");
-      exit(EXIT_FAILURE);
-    }
-
-    // If fork is okay run the command
-    if (rs == 0)
-    {
-      rs = execvp(command.c_str(), argument);
-
-      // If the command doesn't work exit and 
-      // tell the user the command that execvp
-      // didn't like
-      if (rs == -1)
-      {
-        perror(*argument);
-        exit(EXIT_FAILURE); 
-      }
-    }
+    // If no pipe and no stop just do the command
     else
-    { 
-      // Parent process: wait for child to end
-      wait(&status);
+    {
+      executeCommand(command);
     }
-
-  }
+  } 
 
   return 0;
 }
