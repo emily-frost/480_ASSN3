@@ -9,16 +9,18 @@
  Purpose: Microshell Simulation. 
  ************************************************************/
 
-#include <string>
 #include <iostream>
 #include <unistd.h>
 #include <vector>
+#include <stdio.h>
+#include <string.h>
 
 using std::cout;
 using std::endl;
 using std::cin;
 using std::string;
 using std::vector;
+using std::strtok;
 
 void doPipe()
 {
@@ -34,14 +36,19 @@ string getInput(string command)
 
 void executeCommand(string command)
 {
-  string realCommand; 
+	string delimiter = " ";
 
-  for ( auto x : command )
-  {
-    realCommand += x;
-  }
+	size_t pos = 0;
+	string token;
 
-  execlp(realCommand.c_str(), realCommand.c_str(), NULL);
+	while ((pos = command.find(delimiter)) != std::string::npos)
+	{
+		token = command.substr(0, pos);
+		cout << token << endl;
+		command.erase(0, pos + delimiter.length());
+	}
+
+	cout << command << endl;
 }
 
 int main()
