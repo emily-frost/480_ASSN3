@@ -20,7 +20,6 @@ using std::endl;
 using std::cin;
 using std::string;
 using std::vector;
-using std::strtok;
 
 void doPipe()
 {
@@ -36,19 +35,39 @@ string getInput(string command)
 
 void executeCommand(string command)
 {
-	string delimiter = " ";
-
+	string realCommand, token, delimiter = " ";
+	vector<string> buffer; 
 	size_t pos = 0;
-	string token;
+	int count = 0;
 
 	while ((pos = command.find(delimiter)) != std::string::npos)
 	{
 		token = command.substr(0, pos);
-		cout << token << endl;
+		if ( count == 0 )
+		{
+			realCommand = token;
+		}
+		buffer.push_back(token);
 		command.erase(0, pos + delimiter.length());
+		cout << token << endl;
+		count++;
 	}
 
-	cout << command << endl;
+	char * args[buffer.size()];
+	count = 0;
+	for ( auto x : buffer )
+	{
+		char * writable = new char[x.size() + 1];
+		copy(x.begin(), x.end(), writable);
+		writable[x.size()] = '\0'; 
+		args[count] = writable;
+		delete[] writable;
+		count++;
+	}
+	args[count] = (char *) NULL;
+	
+	execvp(realCommand.c_str(), args);
+
 }
 
 int main()
