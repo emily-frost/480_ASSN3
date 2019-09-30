@@ -23,28 +23,46 @@ using namespace std;
 void doPipe(char *buf)
 {
   char * ar1[32], * ar2[32];
-  char * p, * p2;
+  char * p, * p2, * p3;
   int counter = 0;
   int pipe1[2], pipe2[2];
   bool firstPipe = true;
 
+  // ls || cat 
+  // splits initial char 
+  // p is now ls
   p = strtok(buf, "||");
+  // p is "ls " continue
+  p2 = strtok(NULL, "||");
+ 
   while (p != NULL)
   {
+    cout << "Pipe: " << p << endl;
+    // first pipe is true continue
+
     if( firstPipe == true)
     {
+      // p2 is now "ls"
       p2 = strtok(p, " ");
+      cout << "p2a: " << p2 << " Count: " << counter << endl;
+      // go in 1 time for "ls"
       while (p2 != NULL)
       {
+        // sets index 0 to "ls"
         ar1[counter] = p2;     
+        // p2 is now null
         p2 = strtok(NULL, " ");
+        // counter is at 1
         counter++;
       }
+      // flag for second pipe reset pack counter
       firstPipe = false;
       counter = 0;
     }
+    // commands on second half of pipe
     else
     {
+      cout << "p2b: " << p2 << " Count: " << counter << endl;
       p2 = strtok(p, " ");
       while (p2 != NULL)
       {
@@ -54,10 +72,10 @@ void doPipe(char *buf)
       }
       counter = 0;
     }
+
+    p = strtok(NULL, "||");
+
   }
-  cout << "ar1" << endl;
-  for ( auto x : ar1 )
-    cout << x << endl;
 
 }
 
