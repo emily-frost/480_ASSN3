@@ -11,7 +11,6 @@
 
 #include <iostream>
 #include <unistd.h>
-#include <vector>
 #include <stdio.h>
 #include <string.h>
 #include <sys/types.h>
@@ -22,60 +21,32 @@ using namespace std;
 
 void doPipe(char *buf)
 {
-  char * ar1[32], * ar2[32];
-  char * p, * p2, * p3;
+  char * d;
   int counter = 0;
   int pipe1[2], pipe2[2];
   bool firstPipe = true;
+  char * pipeCommands[32];
 
-  // ls || cat 
-  // splits initial char 
-  // p is now ls
-  p = strtok(buf, "||");
-  // p is "ls " continue
-  p2 = strtok(NULL, "||");
- 
-  while (p != NULL)
+  d = strtok(buf, "||");
+
+  while (d != NULL)
   {
-    cout << "Pipe: " << p << endl;
-    // first pipe is true continue
-
-    if( firstPipe == true)
-    {
-      // p2 is now "ls"
-      p2 = strtok(p, " ");
-      cout << "p2a: " << p2 << " Count: " << counter << endl;
-      // go in 1 time for "ls"
-      while (p2 != NULL)
-      {
-        // sets index 0 to "ls"
-        ar1[counter] = p2;     
-        // p2 is now null
-        p2 = strtok(NULL, " ");
-        // counter is at 1
-        counter++;
-      }
-      // flag for second pipe reset pack counter
-      firstPipe = false;
-      counter = 0;
-    }
-    // commands on second half of pipe
-    else
-    {
-      cout << "p2b: " << p2 << " Count: " << counter << endl;
-      p2 = strtok(p, " ");
-      while (p2 != NULL)
-      {
-        ar2[counter] = p2;     
-        p2 = strtok(NULL, " ");
-        counter++;
-      }
-      counter = 0;
-    }
-
-    p = strtok(NULL, "||");
-
+    pipeCommands[counter] = d;
+    d = strtok(NULL, "||");
+    counter++;
   }
+
+  for(int i = 0; i < counter; i++) 
+  {
+    char * e;
+    e = strtok(pipeCommands[i], " ");
+    while (e != NULL)
+    {
+      cout << e << endl;
+      e = strtok(NULL, " "); 
+    }
+  }
+
 
 }
 
@@ -87,52 +58,61 @@ int main(void)
   {
     char buf[1024];
     printf("480shell> ");
-    string command; 
+    string realCommand;
     cin.getline(buf, sizeof(buf));
+    string command (buf); 
     int status;
     char * args[32];
     char *p;
     pid_t pid;
     int count = 0;
-    p = strtok(buf, " ");
-    while (p != NULL)
-    {
-      if (strcmp(p, "quit") == 0 || strcmp(p, "q") == 0)
-      {
-        cool = false;
-      }
-      else if (strcmp(p, "||") == 0)
-      {
-        doPipe(buf);
-      }
-      else if ( count == 0 )
-      {
-        command = p;
-        args[count] = p;
-        count++;
-      }
-      else
-      {
-        args[count] = p;
-        count++;
-      }
-      p = strtok(NULL, " ");
-    }
-    args[count] = (char *) NULL;
 
-    if ( (pid = fork()) < 0 )
+    if (command.find("quit") != string::npos || command.find("q") != string::npos)
     {
-			printf("fork error");
+      break;
     }
-    else if ( pid == 0 )
+    else if (command.find("||") != string::npos)
     {
-      execvp(command.c_str(), args);
+      doPipe(buf);
     }
-    if ( (pid = waitpid(pid, &status, 0)) < 0)
+    else
     {
-			printf("waitpid error");  
-      cool = false;
+      p = strtok(buf, " ");
+      while (p != NULL)
+      {
+        if ( count == 0 )
+        {
+          realCommand = p;
+          args[count] = p;
+          count++;
+        }
+        else
+        {
+          args[count] = p;
+          count++;
+        }
+        p = strtok(NULL, " ");
+      }
+
+      args[count] = (char *) NULL;
+
+      if ( (pid = fork()) < 0 )
+      {
+        printf("fork error");
+      }
+      else if ( pid == 0 )
+      {
+        execvp(realCommand.c_str(), args);
+      }
+
+      if ( (pid = waitpid(pid, &status, 0)) < 0)
+      {
+        printf("waitpid error\n");  
+        break;
+      }
+
     }
+
   }
 
   return 0;
