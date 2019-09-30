@@ -13,6 +13,7 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <string.h>
+#include <vector>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <stdio.h>
@@ -23,9 +24,13 @@ void doPipe(char *buf)
 {
   char * d;
   int counter = 0;
+  int waitCounter = 0;
+  int status;
   int pipe1[2], pipe2[2];
   bool firstPipe = true;
+  bool firstCommand = true;
   char * pipeCommands[32];
+  char * arrayOfArray[32][32];
 
   d = strtok(buf, "||");
 
@@ -39,14 +44,59 @@ void doPipe(char *buf)
   for(int i = 0; i < counter; i++) 
   {
     char * e;
+    char * args[32];
+    pid_t cpid;
+    int pipefd[2];
+    string theCommand;
+
     e = strtok(pipeCommands[i], " ");
+
     while (e != NULL)
     {
-      cout << e << endl;
+      if (firstCommand == true)
+      {
+        theCommand = e;
+        args[i] = e;
+      }
+      else
+      {
+        args[i] = e;
+      }
       e = strtok(NULL, " "); 
+      firstCommand = false;
     }
-  }
+    args[i+1] = (char *) NULL;
+    firstCommand = true;
 
+    pipe(pipefd);
+
+    if ( (cpid = fork()) < 0 )
+    {
+      printf("fork error");
+    }
+    else if ( cpid == 0 )
+    {
+      if (i % 2 == 0)
+      {
+        close(pipefd[0]);
+        dup2(pipefd[1], STDIN_FILENO);
+        execvp(theCommand.c_str(), args);
+      }
+      else
+      {
+        close(pipefd[1]);
+        dup2(pipefd[0], STDIN_FILENO);
+        execvp(theCommand.c_str(), args);
+      }
+    }
+
+    if ( (cpid = waitpid(cpid, &status, 0)) < 0)
+    {
+      printf("waitpid error\n");  
+      break;
+    }
+
+  }
 
 }
 
