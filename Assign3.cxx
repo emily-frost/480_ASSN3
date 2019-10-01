@@ -22,83 +22,99 @@ using namespace std;
 
 void doPipe(char *buf)
 {
-  char * d;
-  int counter = 0;
-  int waitCounter = 0;
-  int status;
-  int pipe1[2], pipe2[2];
-  bool firstPipe = true;
-  bool firstCommand = true;
-  char * pipeCommands[32];
-  char * arrayOfArray[32][32];
+  // process buff and get vars
+  int i = 0, status,status2, pipefd[2], pid, grandChild;
+  string realCommand1, realCommand2;
+  char *command1, *command2;
+  char *args1[32], *args2[32];
 
-  d = strtok(buf, "||");
+  command1 = strtok(buf, "||");
+  command2 = strtok(NULL, "||");
 
-  while (d != NULL)
+  command1 = strtok(command1, " ");
+  while (command1 != NULL)
   {
-    pipeCommands[counter] = d;
-    d = strtok(NULL, "||");
-    counter++;
+    if ( i == 0 )
+    {
+      realCommand1 = command1;
+      args1[i] = command1;
+    }
+    else
+    {
+      args1[i] = command1;
+    }
+
+    command1 = strtok(NULL, " ");
+
+    i++;
   }
 
-  for(int i = 0; i < counter; i++) 
+	args1[i] = (char *) NULL;
+
+  i = 0;
+  
+  command2 = strtok(command2, " ");
+  while (command2 != NULL)
   {
-    char * e;
-    char * args[32];
-    pid_t cpid;
-    int pipefd[2];
-    string theCommand;
-
-    e = strtok(pipeCommands[i], " ");
-
-    while (e != NULL)
+    if ( i == 0 )
     {
-      if (firstCommand == true)
-      {
-        theCommand = e;
-        args[i] = e;
-      }
-      else
-      {
-        args[i] = e;
-      }
-      e = strtok(NULL, " "); 
-      firstCommand = false;
+      realCommand2 = command2;
+      args2[i] = command2;
     }
-    args[i+1] = (char *) NULL;
-    firstCommand = true;
-
-    pipe(pipefd);
-
-    if ( (cpid = fork()) < 0 )
+    else
     {
-      printf("fork error");
-    }
-    else if ( cpid == 0 )
-    {
-      if (i % 2 == 0)
-      {
-        close(pipefd[0]);
-        dup2(pipefd[1], STDIN_FILENO);
-        execvp(theCommand.c_str(), args);
-      }
-      else
-      {
-        close(pipefd[1]);
-        dup2(pipefd[0], STDIN_FILENO);
-        execvp(theCommand.c_str(), args);
-      }
+      args2[i] = command2;
     }
 
-    if ( (cpid = waitpid(cpid, &status, 0)) < 0)
-    {
-      printf("waitpid error\n");  
-      break;
-    }
+    command2 = strtok(NULL, " ");
 
+    i++;
   }
+	args2[i] = (char *) NULL;
+ 
+  // execute exec with forks and dup2 and pipes
+	pipe(pipefd);
 
-}
+	if ((pid = fork()) <0)
+	{
+		printf("fork error");
+	}
+	/* child */
+	else if (pid == 0)
+	{
+	 dup2(pipefd[1], 1);
+	 close(pipefd[0]);
+	 execlp(realCommand1.c_str(), realCommand1.c_str(), args1[1], (char *) NULL);
+	 printf("couldn't execute: %s", buf);
+	 exit(127);
+	}
+	/* parent */
+	if ((grandChild = fork()) < 0)
+	{
+		printf("fork#2 error");
+	}
+	else if (grandChild == 0)
+	{
+		dup2(pipefd[0], 0);
+		close(pipefd[1]);
+		execlp(realCommand2.c_str(), realCommand2.c_str(), args2[1], (char *) NULL);
+		printf("couldn't execute: %s", buf);
+		exit(127);
+	}
+
+	close(pipefd[1]);
+
+	if((grandChild = waitpid(grandChild, &status2, 0)) < 0)
+	{
+		printf("waitpid error in child");
+	}
+
+	if ( (pid = waitpid(pid, &status, 0)) < 0)
+	{
+		printf("waitpid error");
+	}
+	
+ }
 
 int main(void)
 {
@@ -119,7 +135,7 @@ int main(void)
 
     if (command.find("quit") != string::npos || command.find("q") != string::npos)
     {
-      break;
+      exit(0);
     }
     else if (command.find("||") != string::npos)
     {
@@ -158,7 +174,7 @@ int main(void)
       if ( (pid = waitpid(pid, &status, 0)) < 0)
       {
         printf("waitpid error\n");  
-        break;
+        exit(-1);
       }
 
     }
